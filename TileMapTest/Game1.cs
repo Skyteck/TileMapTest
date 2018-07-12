@@ -15,11 +15,12 @@ namespace TileMapTest
         SpriteBatch spriteBatch;
 
         TilemapManager _MapManager;
-        Tile hoveredTIle;
+        List<Tile> path;
+        Tile TileOne;
+        Tile TileTwo;
         Texture2D rectTex;
         Rectangle tileRect;
-        BuildingGhost selectedBuilding;
-        List<Building> buildings = new List<Building>();
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -52,8 +53,6 @@ namespace TileMapTest
             _MapManager = new TilemapManager();
             _MapManager.LoadMap("ProtoLevel", Content);
             rectTex = Content.Load<Texture2D>(@"Art/edgeTex");
-            selectedBuilding = new BuildingGhost();
-            selectedBuilding._Opacity = 0.5f;
             // TODO: use this.Content to load your game content here
         }
 
@@ -77,25 +76,33 @@ namespace TileMapTest
                 Exit();
             InputHelper.Update();
 
-            Tile clickedTile = _MapManager.findTile(InputHelper.MouseScreenPos);
-            if(clickedTile != null)
-            {
+            Tile hoveredTile = _MapManager.findTile(InputHelper.MouseScreenPos);
 
-                selectedBuilding._Position = clickedTile.tileCenter;
-            }
-            
             if(InputHelper.IsKeyPressed(Keys.D1))
             {
-                selectedBuilding.LoadContent("Art/BuildingRect", Content);
+                TileOne = hoveredTile;
+                if (TileOne != null && TileTwo != null)
+                {
+                    path = _MapManager.AStarTwo(TileOne, TileTwo);
+                }
             }
 
-            if(selectedBuilding != null && InputHelper.LeftButtonClicked)
+            if(InputHelper.IsKeyPressed(Keys.D2))
             {
-                Building nb = new Building();
-                nb.LoadContent("Art/BuildingRect", Content);
-                nb._Position = selectedBuilding._Position;
-                buildings.Add(nb);
+                TileTwo = hoveredTile;
+                if (TileOne != null && TileTwo != null)
+                {
+                    path = _MapManager.AStarTwo(TileOne, TileTwo);
+                }
             }
+
+            if(InputHelper.IsKeyPressed(Keys.O))
+            {
+                TileOne = null;
+                TileTwo = null;
+            }
+
+
             // TODO: Add your update logic here
 
             base.Update(gameTime);
@@ -111,22 +118,62 @@ namespace TileMapTest
             spriteBatch.Begin();
             // TODO: Add your drawing code here
             _MapManager.Draw(spriteBatch, GraphicsDevice.Viewport.Bounds);
-            if(selectedBuilding != null)
+
+            //if(hoveredTile != null)
+            //{
+            //    spriteBatch.Draw(rectTex, hoveredTile.destRect, Color.White);
+            //}
+
+            if(TileOne != null)
             {
-                if(selectedBuilding._Texture != null)
+                spriteBatch.Draw(rectTex, TileOne.destRect, Color.White);
+            }
+
+
+            if(TileTwo != null)
+            {
+                spriteBatch.Draw(rectTex, TileTwo.destRect, Color.Blue);
+            }
+
+            if(TileOne != null && TileTwo != null)
+            {
+                Tile prevTile = TileOne;
+                if(path != null)
                 {
-                    selectedBuilding.Draw(spriteBatch);
+
+                    foreach (Tile t in path)
+                    {
+                        DrawLine(spriteBatch, prevTile.tileCenter, t.tileCenter);
+                        prevTile = t;
+                    }
                 }
             }
 
-            foreach(Building b in buildings)
-            {
-                b.Draw(spriteBatch);
-            }
             base.Draw(gameTime);
             spriteBatch.End();
         }
 
+        void DrawLine(SpriteBatch sb, Vector2 start, Vector2 end)
+        {
+            Vector2 edge = end - start;
+            // calculate angle to rotate line
+            float angle =
+                (float)Math.Atan2(edge.Y, edge.X);
 
+
+            sb.Draw(rectTex,
+                new Rectangle(// rectangle defines shape of line and position of start of line
+                    (int)start.X,
+                    (int)start.Y,
+                    (int)edge.Length(), //sb will strech the texture to fill this rectangle
+                    1), //width of line, change this to make thicker line
+                null,
+                Color.Red, //colour of line
+                angle,     //angle of line (calulated above)
+                new Vector2(0, 0), // point in line about which to rotate
+                SpriteEffects.None,
+                0);
+
+        }
     }
 }
